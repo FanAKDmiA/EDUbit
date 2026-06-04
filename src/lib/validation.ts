@@ -3,7 +3,13 @@ export function isValidEmail(email: string) {
 }
 
 export function isValidPassword(password: string) {
-  return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
+  return (
+    password.length >= 8 &&
+    /[a-z]/.test(password) &&
+    /[A-Z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
 }
 
 export function normalizeEmail(email: string) {

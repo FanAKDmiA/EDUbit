@@ -1,4 +1,10 @@
-import { forcePasswordReset, generateInvitationLink, resendInvitation, updateUserAdmin } from "@/app/admin/actions";
+import {
+  disableInvitedUser,
+  forcePasswordReset,
+  generateInvitationLink,
+  resendInvitation,
+  updateUserAdmin
+} from "@/app/admin/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -13,7 +19,14 @@ export default async function AdminUserDetailPage({
   searchParams
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; updated?: string; reset?: string; resent?: string; invite_link?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    updated?: string;
+    reset?: string;
+    resent?: string;
+    disabled?: string;
+    invite_link?: string;
+  }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -35,7 +48,9 @@ export default async function AdminUserDetailPage({
       ? "Reset de contraseña solicitado."
       : query.resent
         ? "Email de acceso reenviado correctamente."
-        : undefined;
+        : query.disabled
+          ? "Invitado dado de baja correctamente."
+          : undefined;
 
   return (
     <AppShell profile={profile}>
@@ -45,7 +60,9 @@ export default async function AdminUserDetailPage({
           <div className="mt-5 rounded-md border border-mint/40 bg-mint/10 p-4">
             <p className="text-sm font-semibold text-[#12604f]">Link de invitación generado</p>
             <input className="mt-2 w-full rounded-md border border-ink/15 bg-white px-3 py-2 text-xs" readOnly value={query.invite_link} />
-            <p className="mt-2 text-xs text-ink/60">Copiá este link y envialo por un canal privado. El link permite completar el onboarding.</p>
+            <p className="mt-2 text-xs text-ink/60">
+              Copiá este link y envialo por un canal privado. El link permite completar el onboarding.
+            </p>
           </div>
         ) : null}
         <form action={updateUserAdmin} className="mt-6 grid gap-4">
@@ -105,6 +122,15 @@ export default async function AdminUserDetailPage({
               Generar link de acceso
             </Button>
           </form>
+          {user.status === "invited" ? (
+            <form action={disableInvitedUser}>
+              <input type="hidden" name="user_id" value={user.id} />
+              <input type="hidden" name="return_to" value={`/admin/users/${user.id}`} />
+              <Button type="submit" variant="ghost">
+                Dar de baja invitado
+              </Button>
+            </form>
+          ) : null}
         </div>
       </section>
     </AppShell>

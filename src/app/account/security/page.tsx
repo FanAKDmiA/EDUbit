@@ -1,13 +1,12 @@
 import { changeOwnPassword } from "@/app/account/actions";
+import { PasswordSubmitFields } from "@/components/auth/password-submit-fields";
 import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/field";
 import { StatusMessage } from "@/components/ui/status-message";
 import { requireUser } from "@/lib/auth/require-user";
 import { redirect } from "next/navigation";
 
 const errors: Record<string, string> = {
-  "invalid-password": "La contraseña debe tener al menos 8 caracteres, letras y números, y coincidir con la confirmación."
+  "invalid-password": "La contraseña debe cumplir todas las condiciones y coincidir con la confirmación."
 };
 
 export default async function AccountSecurityPage({
@@ -31,13 +30,7 @@ export default async function AccountSecurityPage({
         <p className="mt-2 text-sm text-ink/65">Cambiá tu contraseña sin guardar secretos en EDUbit.</p>
         <form action={changeOwnPassword} className="mt-6 grid gap-4">
           <StatusMessage error={error} success={params.updated ? "Contraseña actualizada correctamente." : undefined} />
-          <Field label="Nueva contraseña">
-            <Input name="password" type="password" autoComplete="new-password" minLength={8} required />
-          </Field>
-          <Field label="Confirmar contraseña">
-            <Input name="confirm_password" type="password" autoComplete="new-password" minLength={8} required />
-          </Field>
-          <Button type="submit">Actualizar contraseña</Button>
+          <PasswordSubmitFields submitLabel="Actualizar contraseña" />
         </form>
       </section>
     </AppShell>

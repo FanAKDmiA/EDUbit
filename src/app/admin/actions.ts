@@ -290,6 +290,65 @@ export async function generateInvitationLink(formData: FormData) {
   redirect(`${returnTo}?invite_link=${encodeURIComponent(actionLink)}`);
 }
 
+export async function disableInvitedUser(formData: FormData) {
+  const { profile: actor } = await requireRole("admin");
+  const userId = formValue(formData, "user_id");
+  const returnTo = formValue(formData, "return_to") || "/admin/users";
+
+  if (!userId) {
+    redirect(`${returnTo}?error=invalid-disable`);
+  }
+
+  const supabase = createAdminClient();
+  const { data: target, error: targetError } = await supabase
+    .from("profiles")
+    .select("id,email,role,status")
+    .eq("id", userId)
+    .single();
+
+  if (targetError || !target) {
+    redirect(`${returnTo}?error=user-not-found`);
+  }
+
+  if (target.status !== "invited") {
+    redirect(`${returnTo}?error=user-not-invited`);
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ status: "disabled", updated_by: actor.id })
+    .eq("id", userId);
+
+  if (error) {
+    redirect(`${returnTo}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await supabase
+    .from("access_requests")
+    .update({
+      status: "cancelled",
+      reviewed_by: actor.id,
+      reviewed_at: new Date().toISOString(),
+      review_notes: "Invitación dada de baja"
+    })
+    .eq("created_user_id", userId)
+    .eq("status", "approved");
+
+  await logAuditEvent({
+    actorUserId: actor.id,
+    targetUserId: userId,
+    action: "invited_user_disabled",
+    entityType: "profile",
+    entityId: userId,
+    metadata: { email: target.email, role: target.role }
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId}`);
+  revalidatePath("/admin/access-requests");
+  redirect(`${returnTo}?disabled=1`);
+}
+
 export async function approveAccessRequest(formData: FormData) {
   const { profile: actor } = await requireRole("admin");
   const requestId = formValue(formData, "request_id");
@@ -315,12 +374,41 @@ export async function approveAccessRequest(formData: FormData) {
     redirectTo: `${getSiteUrl()}/auth/confirm?next=/onboarding`
   });
 
-  if (error || !data.user) {
-    redirect(`/admin/access-requests?error=${encodeURIComponent(error?.message || "invite-failed")}`);
+  let invitedUserId = data.user?.id;
+  const alreadyRegistered = error?.message.toLowerCase().includes("already been registered");
+
+  if (error && !alreadyRegistered) {
+    redirect(`/admin/access-requests?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (alreadyRegistered) {
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id,email,full_name,role,status")
+      .eq("email", request.email)
+      .maybeSingle();
+
+    if (!existingProfile) {
+      redirect("/admin/access-requests?error=user-already-exists-without-profile");
+    }
+
+    invitedUserId = existingProfile.id;
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(request.email, {
+      redirectTo: `${getSiteUrl()}/auth/confirm?next=/onboarding`
+    });
+
+    if (resetError) {
+      redirect(`/admin/access-requests?error=${encodeURIComponent(resetError.message)}`);
+    }
+  }
+
+  if (!invitedUserId) {
+    redirect("/admin/access-requests?error=invite-failed");
   }
 
   await supabase.from("profiles").upsert({
-    id: data.user.id,
+    id: invitedUserId,
     email: request.email,
     full_name: request.full_name,
     role: request.requested_role,
@@ -336,17 +424,17 @@ export async function approveAccessRequest(formData: FormData) {
       reviewed_by: actor.id,
       reviewed_at: new Date().toISOString(),
       review_notes: notes || null,
-      created_user_id: data.user.id
+      created_user_id: invitedUserId
     })
     .eq("id", requestId);
 
   await logAuditEvent({
     actorUserId: actor.id,
-    targetUserId: data.user.id,
+    targetUserId: invitedUserId,
     action: "access_request_approved",
     entityType: "access_request",
     entityId: requestId,
-    metadata: { requested_role: request.requested_role }
+    metadata: { requested_role: request.requested_role, reused_existing_user: alreadyRegistered }
   });
 
   revalidatePath("/admin/access-requests");

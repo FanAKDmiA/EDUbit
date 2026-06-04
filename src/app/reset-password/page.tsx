@@ -1,12 +1,11 @@
-import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/field";
+import { PasswordSubmitFields } from "@/components/auth/password-submit-fields";
 import { StatusMessage } from "@/components/ui/status-message";
 import Image from "next/image";
 import Link from "next/link";
 import { updatePassword } from "./actions";
 
 const errors: Record<string, string> = {
-  "invalid-password": "La contraseña debe tener al menos 8 caracteres, letras y números, y coincidir con la confirmación.",
+  "invalid-password": "La contraseña debe cumplir todas las condiciones y coincidir con la confirmación.",
   "invalid-token": "El enlace de recuperación es inválido o expiró. Solicitá uno nuevo."
 };
 
@@ -26,13 +25,7 @@ export default async function ResetPasswordPage({
         <h1 className="mt-3 text-center text-3xl font-black">Restablecer acceso</h1>
         <form action={updatePassword} className="mt-6 grid gap-4">
           <StatusMessage error={error} success={params.updated ? "Contraseña actualizada correctamente." : undefined} />
-          <Field label="Nueva contraseña">
-            <Input name="password" type="password" autoComplete="new-password" minLength={8} required />
-          </Field>
-          <Field label="Confirmar contraseña">
-            <Input name="confirm_password" type="password" autoComplete="new-password" minLength={8} required />
-          </Field>
-          <Button type="submit">Actualizar contraseña</Button>
+          <PasswordSubmitFields submitLabel="Actualizar contraseña" />
         </form>
         <Link href="/login" className="mt-6 inline-flex text-sm font-semibold text-ink hover:text-mint">
           Volver al login

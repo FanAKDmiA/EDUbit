@@ -1,5 +1,5 @@
 import { completeOnboarding } from "@/app/account/actions";
-import { Button } from "@/components/ui/button";
+import { PasswordSubmitFields } from "@/components/auth/password-submit-fields";
 import { Field, Input } from "@/components/ui/field";
 import { StatusMessage } from "@/components/ui/status-message";
 import { requireUser } from "@/lib/auth/require-user";
@@ -38,17 +38,7 @@ export default async function OnboardingPage({
           <Field label="Nombre y apellido">
             <Input name="full_name" defaultValue={profile.full_name} required />
           </Field>
-          <Field label="Nueva contraseña">
-            <Input name="password" type="password" autoComplete="new-password" minLength={8} required />
-          </Field>
-          <Field label="Confirmar contraseña">
-            <Input name="confirm_password" type="password" autoComplete="new-password" minLength={8} required />
-          </Field>
-          <label className="flex gap-3 rounded-md border border-ink/10 bg-[#f7f4ee] p-3 text-sm">
-            <input name="accepted_terms" type="checkbox" className="mt-1 h-4 w-4" required />
-            <span>Acepto el uso educativo de la plataforma y comprendo que EDUbit no representa dinero real.</span>
-          </label>
-          <Button type="submit">Completar onboarding</Button>
+          <PasswordSubmitFields submitLabel="Completar onboarding" includeTerms />
         </form>
       </section>
     </main>
