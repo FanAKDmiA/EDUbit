@@ -202,6 +202,48 @@ export async function forcePasswordReset(formData: FormData) {
   redirect(`/admin/users/${userId}?reset=1`);
 }
 
+export async function resendInvitation(formData: FormData) {
+  const { profile: actor } = await requireRole("admin");
+  const userId = formValue(formData, "user_id");
+  const email = normalizeEmail(formValue(formData, "email"));
+  const fullName = formValue(formData, "full_name");
+  const role = formValue(formData, "role") as Role;
+  const returnTo = formValue(formData, "return_to") || "/admin/users";
+
+  if (!userId || !fullName || !isValidEmail(email) || !["admin", "teacher", "student"].includes(role)) {
+    redirect(`${returnTo}?error=invalid-resend`);
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
+    data: { full_name: fullName, role },
+    redirectTo: `${getSiteUrl()}/auth/callback?next=/onboarding`
+  });
+
+  if (error) {
+    redirect(`${returnTo}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await supabase
+    .from("profiles")
+    .update({ status: "invited", updated_by: actor.id })
+    .eq("id", userId);
+
+  await logAuditEvent({
+    actorUserId: actor.id,
+    targetUserId: userId,
+    action: "invitation_resent",
+    entityType: "profile",
+    entityId: userId,
+    metadata: { email, role }
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId}`);
+  revalidatePath("/admin/access-requests");
+  redirect(`${returnTo}?resent=1`);
+}
+
 export async function approveAccessRequest(formData: FormData) {
   const { profile: actor } = await requireRole("admin");
   const requestId = formValue(formData, "request_id");

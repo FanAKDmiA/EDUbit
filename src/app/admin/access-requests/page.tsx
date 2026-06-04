@@ -1,4 +1,4 @@
-import { approveAccessRequest, rejectAccessRequest } from "@/app/admin/actions";
+import { approveAccessRequest, rejectAccessRequest, resendInvitation } from "@/app/admin/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,14 +11,14 @@ import { roleLabel } from "@/types/roles";
 export default async function AdminAccessRequestsPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string; approved?: string; rejected?: string }>;
+  searchParams: Promise<{ error?: string; approved?: string; rejected?: string; resent?: string }>;
 }) {
   const params = await searchParams;
   const { profile } = await requireRole("admin");
   const supabase = createAdminClient();
   const { data: requests } = await supabase
     .from("access_requests")
-    .select("*")
+    .select("*, created_user:profiles!access_requests_created_user_id_fkey(id,email,full_name,role,status)")
     .order("created_at", { ascending: false });
 
   return (
@@ -32,7 +32,9 @@ export default async function AdminAccessRequestsPage({
               ? "Solicitud aprobada e invitación enviada."
               : params.rejected
                 ? "Solicitud rechazada correctamente."
-                : undefined
+                : params.resent
+                  ? "Invitación reenviada correctamente."
+                  : undefined
           }
         />
       </div>
@@ -40,50 +42,68 @@ export default async function AdminAccessRequestsPage({
         {(requests ?? []).length === 0 ? (
           <EmptyState title="Sin solicitudes" body="Cuando alguien solicite acceso, aparecerá en esta vista." />
         ) : (
-          (requests ?? []).map((request) => (
-            <article key={request.id} className="rounded-md border border-ink/10 bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-black">{request.full_name}</h2>
-                  <p className="text-sm text-ink/65">{request.email}</p>
-                  <p className="mt-2 text-sm">
-                    Rol solicitado:{" "}
-                    <span className="font-semibold">
-                      {roleLabel[request.requested_role as keyof typeof roleLabel]}
-                    </span>
-                  </p>
-                  <p className="text-sm text-ink/65">Estado: {request.status}</p>
-                  {request.institution ? (
-                    <p className="text-sm text-ink/65">Institución: {request.institution}</p>
-                  ) : null}
-                  {request.course_reference ? (
-                    <p className="text-sm text-ink/65">Curso: {request.course_reference}</p>
-                  ) : null}
-                  {request.message ? <p className="mt-3 text-sm leading-6 text-ink/75">{request.message}</p> : null}
+          (requests ?? []).map((request) => {
+            const createdUser = Array.isArray(request.created_user)
+              ? request.created_user[0]
+              : request.created_user;
+
+            return (
+              <article key={request.id} className="rounded-md border border-ink/10 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-black">{request.full_name}</h2>
+                    <p className="text-sm text-ink/65">{request.email}</p>
+                    <p className="mt-2 text-sm">
+                      Rol solicitado:{" "}
+                      <span className="font-semibold">
+                        {roleLabel[request.requested_role as keyof typeof roleLabel]}
+                      </span>
+                    </p>
+                    <p className="text-sm text-ink/65">Estado: {request.status}</p>
+                    {request.institution ? (
+                      <p className="text-sm text-ink/65">Institución: {request.institution}</p>
+                    ) : null}
+                    {request.course_reference ? (
+                      <p className="text-sm text-ink/65">Curso: {request.course_reference}</p>
+                    ) : null}
+                    {request.message ? <p className="mt-3 text-sm leading-6 text-ink/75">{request.message}</p> : null}
+                  </div>
                 </div>
-              </div>
-              {request.status === "pending" ? (
-                <div className="mt-5 grid gap-3 md:grid-cols-2">
-                  <form action={approveAccessRequest} className="grid gap-3 rounded-md bg-[#f7f4ee] p-3">
-                    <input type="hidden" name="request_id" value={request.id} />
-                    <Field label="Notas de aprobación">
-                      <Textarea name="review_notes" />
-                    </Field>
-                    <Button type="submit">Aprobar e invitar</Button>
-                  </form>
-                  <form action={rejectAccessRequest} className="grid gap-3 rounded-md bg-[#f7f4ee] p-3">
-                    <input type="hidden" name="request_id" value={request.id} />
-                    <Field label="Motivo de rechazo">
-                      <Textarea name="review_notes" />
-                    </Field>
-                    <Button type="submit" variant="ghost">
-                      Rechazar
+                {request.status === "pending" ? (
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    <form action={approveAccessRequest} className="grid gap-3 rounded-md bg-[#f7f4ee] p-3">
+                      <input type="hidden" name="request_id" value={request.id} />
+                      <Field label="Notas de aprobación">
+                        <Textarea name="review_notes" />
+                      </Field>
+                      <Button type="submit">Aprobar e invitar</Button>
+                    </form>
+                    <form action={rejectAccessRequest} className="grid gap-3 rounded-md bg-[#f7f4ee] p-3">
+                      <input type="hidden" name="request_id" value={request.id} />
+                      <Field label="Motivo de rechazo">
+                        <Textarea name="review_notes" />
+                      </Field>
+                      <Button type="submit" variant="ghost">
+                        Rechazar
+                      </Button>
+                    </form>
+                  </div>
+                ) : null}
+                {request.status === "approved" && createdUser ? (
+                  <form action={resendInvitation} className="mt-5">
+                    <input type="hidden" name="user_id" value={createdUser.id} />
+                    <input type="hidden" name="email" value={createdUser.email} />
+                    <input type="hidden" name="full_name" value={createdUser.full_name} />
+                    <input type="hidden" name="role" value={createdUser.role} />
+                    <input type="hidden" name="return_to" value="/admin/access-requests" />
+                    <Button type="submit" variant="secondary">
+                      Reenviar invitación
                     </Button>
                   </form>
-                </div>
-              ) : null}
-            </article>
-          ))
+                ) : null}
+              </article>
+            );
+          })
         )}
       </div>
     </AppShell>

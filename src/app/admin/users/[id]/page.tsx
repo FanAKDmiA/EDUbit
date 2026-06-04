@@ -1,10 +1,10 @@
-import { forcePasswordReset, updateUserAdmin } from "@/app/admin/actions";
+import { forcePasswordReset, resendInvitation, updateUserAdmin } from "@/app/admin/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { StatusMessage } from "@/components/ui/status-message";
 import { requireRole } from "@/lib/auth/require-role";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { profileStatusLabel } from "@/types/roles";
 import { notFound } from "next/navigation";
 
@@ -13,12 +13,12 @@ export default async function AdminUserDetailPage({
   searchParams
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; updated?: string; reset?: string }>;
+  searchParams: Promise<{ error?: string; updated?: string; reset?: string; resent?: string }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
   const { profile } = await requireRole("admin");
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data: user } = await supabase
     .from("profiles")
     .select("id,email,full_name,role,status,created_at,updated_at,last_login_at")
@@ -29,17 +29,20 @@ export default async function AdminUserDetailPage({
     notFound();
   }
 
+  const success = query.updated
+    ? "Usuario actualizado correctamente."
+    : query.reset
+      ? "Reset de contraseña solicitado."
+      : query.resent
+        ? "Invitación reenviada correctamente."
+        : undefined;
+
   return (
     <AppShell profile={profile}>
       <section className="max-w-2xl rounded-md border border-ink/10 bg-white p-5 shadow-sm">
         <h1 className="text-3xl font-black">Detalle de usuario</h1>
         <form action={updateUserAdmin} className="mt-6 grid gap-4">
-          <StatusMessage
-            error={query.error}
-            success={
-              query.updated ? "Usuario actualizado correctamente." : query.reset ? "Reset de contraseña solicitado." : undefined
-            }
-          />
+          <StatusMessage error={query.error} success={success} />
           <input type="hidden" name="user_id" value={user.id} />
           <Field label="Nombre completo">
             <Input name="full_name" defaultValue={user.full_name} required />
@@ -67,13 +70,25 @@ export default async function AdminUserDetailPage({
           </div>
           <Button type="submit">Guardar cambios</Button>
         </form>
-        <form action={forcePasswordReset} className="mt-4">
-          <input type="hidden" name="user_id" value={user.id} />
-          <input type="hidden" name="email" value={user.email} />
-          <Button type="submit" variant="ghost">
-            Forzar reset de contraseña
-          </Button>
-        </form>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <form action={forcePasswordReset}>
+            <input type="hidden" name="user_id" value={user.id} />
+            <input type="hidden" name="email" value={user.email} />
+            <Button type="submit" variant="ghost">
+              Forzar reset de contraseña
+            </Button>
+          </form>
+          <form action={resendInvitation}>
+            <input type="hidden" name="user_id" value={user.id} />
+            <input type="hidden" name="email" value={user.email} />
+            <input type="hidden" name="full_name" value={user.full_name} />
+            <input type="hidden" name="role" value={user.role} />
+            <input type="hidden" name="return_to" value={`/admin/users/${user.id}`} />
+            <Button type="submit" variant="secondary">
+              Reenviar invitación
+            </Button>
+          </form>
+        </div>
       </section>
     </AppShell>
   );
