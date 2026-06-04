@@ -215,8 +215,7 @@ export async function resendInvitation(formData: FormData) {
   }
 
   const supabase = createAdminClient();
-  const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
-    data: { full_name: fullName, role },
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${getSiteUrl()}/auth/confirm?next=/onboarding`
   });
 
@@ -235,7 +234,7 @@ export async function resendInvitation(formData: FormData) {
     action: "invitation_resent",
     entityType: "profile",
     entityId: userId,
-    metadata: { email, role }
+    metadata: { email, role, email_type: "recovery_to_onboarding" }
   });
 
   revalidatePath("/admin/users");
@@ -258,10 +257,9 @@ export async function generateInvitationLink(formData: FormData) {
 
   const supabase = createAdminClient();
   const { data, error } = await supabase.auth.admin.generateLink({
-    type: "invite",
+    type: "recovery",
     email,
     options: {
-      data: { full_name: fullName, role },
       redirectTo: `${getSiteUrl()}/auth/confirm?next=/onboarding`
     }
   });
@@ -283,7 +281,7 @@ export async function generateInvitationLink(formData: FormData) {
     action: "invitation_link_generated",
     entityType: "profile",
     entityId: userId,
-    metadata: { email, role }
+    metadata: { email, role, link_type: "recovery_to_onboarding" }
   });
 
   revalidatePath("/admin/users");

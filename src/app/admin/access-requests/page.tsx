@@ -33,7 +33,7 @@ export default async function AdminAccessRequestsPage({
               : params.rejected
                 ? "Solicitud rechazada correctamente."
                 : params.resent
-                  ? "Invitación reenviada correctamente."
+                  ? "Email de acceso reenviado correctamente."
                   : undefined
           }
         />
@@ -105,7 +105,7 @@ export default async function AdminAccessRequestsPage({
                       <input type="hidden" name="role" value={createdUser.role} />
                       <input type="hidden" name="return_to" value="/admin/access-requests" />
                       <Button type="submit" variant="secondary">
-                        Reenviar invitación
+                        Reenviar acceso
                       </Button>
                     </form>
                     <form action={generateInvitationLink}>
@@ -115,7 +115,7 @@ export default async function AdminAccessRequestsPage({
                       <input type="hidden" name="role" value={createdUser.role} />
                       <input type="hidden" name="return_to" value="/admin/access-requests" />
                       <Button type="submit" variant="ghost">
-                        Generar link
+                        Generar link de acceso
                       </Button>
                     </form>
                   </div>

@@ -34,7 +34,7 @@ export default async function AdminUserDetailPage({
     : query.reset
       ? "Reset de contraseña solicitado."
       : query.resent
-        ? "Invitación reenviada correctamente."
+        ? "Email de acceso reenviado correctamente."
         : undefined;
 
   return (
@@ -92,7 +92,7 @@ export default async function AdminUserDetailPage({
             <input type="hidden" name="role" value={user.role} />
             <input type="hidden" name="return_to" value={`/admin/users/${user.id}`} />
             <Button type="submit" variant="secondary">
-              Reenviar invitación
+              Reenviar acceso
             </Button>
           </form>
           <form action={generateInvitationLink}>
@@ -102,7 +102,7 @@ export default async function AdminUserDetailPage({
             <input type="hidden" name="role" value={user.role} />
             <input type="hidden" name="return_to" value={`/admin/users/${user.id}`} />
             <Button type="submit" variant="ghost">
-              Generar link de invitación
+              Generar link de acceso
             </Button>
           </form>
         </div>
