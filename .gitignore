@@ -1,0 +1,9 @@
+.next
+node_modules
+dist
+coverage
+*.tsbuildinfo
+iteration1_pdf_text.txt
+.env
+.env.local
+.env.*.local
