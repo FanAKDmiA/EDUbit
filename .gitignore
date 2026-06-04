@@ -4,6 +4,7 @@ dist
 coverage
 *.tsbuildinfo
 iteration1_pdf_text.txt
+iteration1_1_pdf_text.txt
 .env
 .env.local
 .env.*.local

@@ -1,8 +1,11 @@
 "use server";
 
 import { requireRole } from "@/lib/auth/require-role";
+import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Role } from "@/types/roles";
+import { getSiteUrl } from "@/lib/supabase/env";
+import { formValue, isValidEmail, normalizeEmail } from "@/lib/validation";
+import type { ProfileStatus, Role } from "@/types/roles";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -11,7 +14,7 @@ function field(formData: FormData, key: string) {
 }
 
 export async function createManagedUser(formData: FormData) {
-  await requireRole("admin");
+  const { profile: actor } = await requireRole("admin");
 
   const fullName = field(formData, "full_name");
   const email = field(formData, "email").toLowerCase();
@@ -38,15 +41,263 @@ export async function createManagedUser(formData: FormData) {
     id: data.user.id,
     email,
     full_name: fullName,
-    role
+    role,
+    status: "active",
+    created_by: actor.id,
+    updated_by: actor.id
   });
 
   if (profileError) {
     redirect(`/admin/users?error=${encodeURIComponent(profileError.message)}`);
   }
 
+  await logAuditEvent({
+    actorUserId: actor.id,
+    targetUserId: data.user.id,
+    action: "user_created",
+    entityType: "profile",
+    entityId: data.user.id,
+    metadata: { role }
+  });
+
   revalidatePath("/admin/users");
   redirect("/admin/users?created=1");
+}
+
+export async function inviteUser(formData: FormData) {
+  const { profile: actor } = await requireRole("admin");
+
+  const fullName = formValue(formData, "full_name");
+  const email = normalizeEmail(formValue(formData, "email"));
+  const role = formValue(formData, "role") as Role;
+  const courseId = formValue(formData, "course_id");
+
+  if (!fullName || !isValidEmail(email) || !["teacher", "student"].includes(role)) {
+    redirect("/admin/users/invite?error=invalid-invite");
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+    data: { full_name: fullName, role },
+    redirectTo: `${getSiteUrl()}/auth/callback?next=/onboarding`
+  });
+
+  if (error || !data.user) {
+    redirect(`/admin/users/invite?error=${encodeURIComponent(error?.message || "invite-failed")}`);
+  }
+
+  const { error: profileError } = await supabase.from("profiles").upsert({
+    id: data.user.id,
+    email,
+    full_name: fullName,
+    role,
+    status: "invited",
+    created_by: actor.id,
+    updated_by: actor.id
+  });
+
+  if (profileError) {
+    redirect(`/admin/users/invite?error=${encodeURIComponent(profileError.message)}`);
+  }
+
+  if (courseId && role === "student") {
+    await supabase
+      .from("course_memberships")
+      .upsert({ course_id: courseId, student_id: data.user.id }, { onConflict: "course_id,student_id" });
+  }
+
+  if (courseId && role === "teacher") {
+    await supabase.from("courses").update({ teacher_id: data.user.id }).eq("id", courseId);
+  }
+
+  await logAuditEvent({
+    actorUserId: actor.id,
+    targetUserId: data.user.id,
+    action: "user_invited",
+    entityType: "profile",
+    entityId: data.user.id,
+    metadata: { role, course_id: courseId || null }
+  });
+
+  revalidatePath("/admin/users");
+  redirect("/admin/users/invite?invited=1");
+}
+
+export async function updateUserAdmin(formData: FormData) {
+  const { profile: actor } = await requireRole("admin");
+
+  const userId = formValue(formData, "user_id");
+  const fullName = formValue(formData, "full_name");
+  const role = formValue(formData, "role") as Role;
+  const status = formValue(formData, "status") as ProfileStatus;
+
+  if (!userId || !fullName || !["admin", "teacher", "student"].includes(role) || !["active", "invited", "pending", "blocked", "disabled"].includes(status)) {
+    redirect(`/admin/users/${userId || ""}?error=invalid-user-update`);
+  }
+
+  const supabase = createAdminClient();
+  const { data: before } = await supabase.from("profiles").select("role,status").eq("id", userId).single();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ full_name: fullName, role, status, updated_by: actor.id })
+    .eq("id", userId);
+
+  if (error) {
+    redirect(`/admin/users/${userId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (before?.role !== role) {
+    await logAuditEvent({
+      actorUserId: actor.id,
+      targetUserId: userId,
+      action: "role_changed",
+      entityType: "profile",
+      entityId: userId,
+      metadata: { from: before?.role, to: role }
+    });
+  }
+
+  if (before?.status !== status) {
+    await logAuditEvent({
+      actorUserId: actor.id,
+      targetUserId: userId,
+      action: status === "blocked" ? "user_blocked" : status === "disabled" ? "user_disabled" : "user_status_changed",
+      entityType: "profile",
+      entityId: userId,
+      metadata: { from: before?.status, to: status }
+    });
+  }
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId}`);
+  redirect(`/admin/users/${userId}?updated=1`);
+}
+
+export async function forcePasswordReset(formData: FormData) {
+  const { profile: actor } = await requireRole("admin");
+  const userId = formValue(formData, "user_id");
+  const email = normalizeEmail(formValue(formData, "email"));
+
+  if (!userId || !isValidEmail(email)) {
+    redirect(`/admin/users/${userId || ""}?error=invalid-reset`);
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${getSiteUrl()}/auth/callback?next=/reset-password`
+  });
+
+  if (error) {
+    redirect(`/admin/users/${userId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await logAuditEvent({
+    actorUserId: actor.id,
+    targetUserId: userId,
+    action: "password_reset_requested_by_admin",
+    entityType: "profile",
+    entityId: userId
+  });
+
+  redirect(`/admin/users/${userId}?reset=1`);
+}
+
+export async function approveAccessRequest(formData: FormData) {
+  const { profile: actor } = await requireRole("admin");
+  const requestId = formValue(formData, "request_id");
+  const notes = formValue(formData, "review_notes");
+
+  if (!requestId) {
+    redirect("/admin/access-requests?error=missing-request");
+  }
+
+  const supabase = createAdminClient();
+  const { data: request, error: requestError } = await supabase
+    .from("access_requests")
+    .select("*")
+    .eq("id", requestId)
+    .single();
+
+  if (requestError || !request || request.status !== "pending") {
+    redirect("/admin/access-requests?error=request-not-pending");
+  }
+
+  const { data, error } = await supabase.auth.admin.inviteUserByEmail(request.email, {
+    data: { full_name: request.full_name, role: request.requested_role },
+    redirectTo: `${getSiteUrl()}/auth/callback?next=/onboarding`
+  });
+
+  if (error || !data.user) {
+    redirect(`/admin/access-requests?error=${encodeURIComponent(error?.message || "invite-failed")}`);
+  }
+
+  await supabase.from("profiles").upsert({
+    id: data.user.id,
+    email: request.email,
+    full_name: request.full_name,
+    role: request.requested_role,
+    status: "invited",
+    created_by: actor.id,
+    updated_by: actor.id
+  });
+
+  await supabase
+    .from("access_requests")
+    .update({
+      status: "approved",
+      reviewed_by: actor.id,
+      reviewed_at: new Date().toISOString(),
+      review_notes: notes || null,
+      created_user_id: data.user.id
+    })
+    .eq("id", requestId);
+
+  await logAuditEvent({
+    actorUserId: actor.id,
+    targetUserId: data.user.id,
+    action: "access_request_approved",
+    entityType: "access_request",
+    entityId: requestId,
+    metadata: { requested_role: request.requested_role }
+  });
+
+  revalidatePath("/admin/access-requests");
+  redirect("/admin/access-requests?approved=1");
+}
+
+export async function rejectAccessRequest(formData: FormData) {
+  const { profile: actor } = await requireRole("admin");
+  const requestId = formValue(formData, "request_id");
+  const notes = formValue(formData, "review_notes");
+
+  if (!requestId) {
+    redirect("/admin/access-requests?error=missing-request");
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("access_requests")
+    .update({
+      status: "rejected",
+      reviewed_by: actor.id,
+      reviewed_at: new Date().toISOString(),
+      review_notes: notes || null
+    })
+    .eq("id", requestId);
+
+  if (error) {
+    redirect(`/admin/access-requests?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await logAuditEvent({
+    actorUserId: actor.id,
+    action: "access_request_rejected",
+    entityType: "access_request",
+    entityId: requestId
+  });
+
+  revalidatePath("/admin/access-requests");
+  redirect("/admin/access-requests?rejected=1");
 }
 
 export async function createCourse(formData: FormData) {

@@ -9,7 +9,9 @@ const navByRole = {
   admin: [
     { href: "/admin", label: "Inicio" },
     { href: "/admin/users", label: "Usuarios" },
-    { href: "/admin/courses", label: "Cursos" }
+    { href: "/admin/courses", label: "Cursos" },
+    { href: "/admin/access-requests", label: "Solicitudes" },
+    { href: "/admin/audit-logs", label: "Auditoría" }
   ],
   teacher: [
     { href: "/teacher", label: "Inicio" },
@@ -39,6 +41,18 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
                 {item.label}
               </Link>
             ))}
+            <Link
+              href="/account/profile"
+              className="rounded-md px-3 py-2 text-sm font-semibold text-ink/75 hover:bg-ink/5 hover:text-ink"
+            >
+              Mi perfil
+            </Link>
+            <Link
+              href="/account/security"
+              className="rounded-md px-3 py-2 text-sm font-semibold text-ink/75 hover:bg-ink/5 hover:text-ink"
+            >
+              Seguridad
+            </Link>
           </nav>
           <div className="flex items-center gap-3">
             <div className="text-right text-sm">
