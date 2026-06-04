@@ -90,9 +90,11 @@ Configurar redirect URLs para recuperación e invitación:
 http://localhost:3000/reset-password
 http://localhost:3000/onboarding
 http://localhost:3000/auth/callback
+http://localhost:3000/auth/confirm
 https://TU-DOMINIO-VERCEL/reset-password
 https://TU-DOMINIO-VERCEL/onboarding
 https://TU-DOMINIO-VERCEL/auth/callback
+https://TU-DOMINIO-VERCEL/auth/confirm
 ```
 
 Para emails reales de recuperación e invitación, revisar SMTP en Supabase.

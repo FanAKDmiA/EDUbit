@@ -79,7 +79,7 @@ export async function inviteUser(formData: FormData) {
   const supabase = createAdminClient();
   const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName, role },
-    redirectTo: `${getSiteUrl()}/auth/callback?next=/onboarding`
+    redirectTo: `${getSiteUrl()}/auth/confirm?next=/onboarding`
   });
 
   if (error || !data.user) {
@@ -184,7 +184,7 @@ export async function forcePasswordReset(formData: FormData) {
 
   const supabase = createAdminClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${getSiteUrl()}/auth/callback?next=/reset-password`
+    redirectTo: `${getSiteUrl()}/auth/confirm?next=/reset-password`
   });
 
   if (error) {
@@ -217,7 +217,7 @@ export async function resendInvitation(formData: FormData) {
   const supabase = createAdminClient();
   const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName, role },
-    redirectTo: `${getSiteUrl()}/auth/callback?next=/onboarding`
+    redirectTo: `${getSiteUrl()}/auth/confirm?next=/onboarding`
   });
 
   if (error) {
@@ -262,7 +262,7 @@ export async function generateInvitationLink(formData: FormData) {
     email,
     options: {
       data: { full_name: fullName, role },
-      redirectTo: `${getSiteUrl()}/auth/callback?next=/onboarding`
+      redirectTo: `${getSiteUrl()}/auth/confirm?next=/onboarding`
     }
   });
 
@@ -314,7 +314,7 @@ export async function approveAccessRequest(formData: FormData) {
 
   const { data, error } = await supabase.auth.admin.inviteUserByEmail(request.email, {
     data: { full_name: request.full_name, role: request.requested_role },
-    redirectTo: `${getSiteUrl()}/auth/callback?next=/onboarding`
+    redirectTo: `${getSiteUrl()}/auth/confirm?next=/onboarding`
   });
 
   if (error || !data.user) {

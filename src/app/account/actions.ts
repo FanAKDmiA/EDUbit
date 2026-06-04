@@ -68,14 +68,23 @@ export async function changeOwnPassword(formData: FormData) {
 export async function completeOnboarding(formData: FormData) {
   const { user, profile } = await requireUser();
   const fullName = formValue(formData, "full_name");
+  const password = String(formData.get("password") || "");
+  const confirmPassword = String(formData.get("confirm_password") || "");
   const acceptedTerms = formData.get("accepted_terms") === "on";
 
   if (!profile || profile.status !== "invited") {
     redirect("/login");
   }
 
-  if (!fullName || !acceptedTerms) {
+  if (!fullName || !acceptedTerms || !isValidPassword(password) || password !== confirmPassword) {
     redirect("/onboarding?error=invalid-onboarding");
+  }
+
+  const authClient = await createClient();
+  const { error: passwordError } = await authClient.auth.updateUser({ password });
+
+  if (passwordError) {
+    redirect(`/onboarding?error=${encodeURIComponent(passwordError.message)}`);
   }
 
   const supabase = createAdminClient();
@@ -94,6 +103,15 @@ export async function completeOnboarding(formData: FormData) {
     action: "user_activated",
     entityType: "profile",
     entityId: user.id
+  });
+
+  await logAuditEvent({
+    actorUserId: user.id,
+    targetUserId: user.id,
+    action: "password_changed",
+    entityType: "profile",
+    entityId: user.id,
+    metadata: { source: "onboarding" }
   });
 
   redirect(profile.role === "admin" ? "/admin" : profile.role === "teacher" ? "/teacher" : "/student");
