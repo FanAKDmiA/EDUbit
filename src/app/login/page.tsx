@@ -17,13 +17,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return (
     <main className="min-h-screen bg-[#f6f8f5] text-ink">
       <section className="mx-auto grid min-h-screen max-w-6xl items-center gap-8 px-5 py-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="flex min-h-[520px] flex-col justify-between rounded-md border border-ink/10 bg-white px-6 py-7 shadow-sm md:px-10 md:py-9">
-          <Link href="/" className="inline-flex w-fit items-center gap-3 text-sm font-bold text-ink/70 hover:text-ink">
-            <Image src="/logo-edubit.png" alt="EDUbit" width={52} height={52} className="h-12 w-12 object-contain" priority />
-            <span>EDUbit</span>
-          </Link>
-
-          <div className="py-10">
+        <div className="flex min-h-[520px] flex-col justify-center rounded-md border border-ink/10 bg-white px-6 py-7 shadow-sm md:px-10 md:py-9">
+          <div className="py-8">
             <Image
               src="/logo-edubit.png"
               alt="Logo de EDUbit"
@@ -39,12 +34,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                 Plataforma para administrar cursos, roles y experiencias pedagógicas inspiradas en blockchain.
               </p>
             </div>
-          </div>
-
-          <div className="grid gap-3 border-t border-ink/10 pt-5 text-sm text-ink/65 md:grid-cols-3">
-            <span>Acceso administrado</span>
-            <span>Supabase Auth</span>
-            <span>Roles protegidos</span>
           </div>
         </div>
 
