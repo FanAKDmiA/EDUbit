@@ -1,4 +1,4 @@
-import { approveAccessRequest, rejectAccessRequest, resendInvitation } from "@/app/admin/actions";
+import { approveAccessRequest, generateInvitationLink, rejectAccessRequest, resendInvitation } from "@/app/admin/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,7 +11,7 @@ import { roleLabel } from "@/types/roles";
 export default async function AdminAccessRequestsPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string; approved?: string; rejected?: string; resent?: string }>;
+  searchParams: Promise<{ error?: string; approved?: string; rejected?: string; resent?: string; invite_link?: string }>;
 }) {
   const params = await searchParams;
   const { profile } = await requireRole("admin");
@@ -38,6 +38,13 @@ export default async function AdminAccessRequestsPage({
           }
         />
       </div>
+      {params.invite_link ? (
+        <div className="mt-4 rounded-md border border-mint/40 bg-mint/10 p-4">
+          <p className="text-sm font-semibold text-[#12604f]">Link de invitación generado</p>
+          <input className="mt-2 w-full rounded-md border border-ink/15 bg-white px-3 py-2 text-xs" readOnly value={params.invite_link} />
+          <p className="mt-2 text-xs text-ink/60">Copiá este link y envialo por un canal privado. El link permite completar el onboarding.</p>
+        </div>
+      ) : null}
       <div className="mt-6 grid gap-4">
         {(requests ?? []).length === 0 ? (
           <EmptyState title="Sin solicitudes" body="Cuando alguien solicite acceso, aparecerá en esta vista." />
@@ -90,16 +97,28 @@ export default async function AdminAccessRequestsPage({
                   </div>
                 ) : null}
                 {request.status === "approved" && createdUser ? (
-                  <form action={resendInvitation} className="mt-5">
-                    <input type="hidden" name="user_id" value={createdUser.id} />
-                    <input type="hidden" name="email" value={createdUser.email} />
-                    <input type="hidden" name="full_name" value={createdUser.full_name} />
-                    <input type="hidden" name="role" value={createdUser.role} />
-                    <input type="hidden" name="return_to" value="/admin/access-requests" />
-                    <Button type="submit" variant="secondary">
-                      Reenviar invitación
-                    </Button>
-                  </form>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <form action={resendInvitation}>
+                      <input type="hidden" name="user_id" value={createdUser.id} />
+                      <input type="hidden" name="email" value={createdUser.email} />
+                      <input type="hidden" name="full_name" value={createdUser.full_name} />
+                      <input type="hidden" name="role" value={createdUser.role} />
+                      <input type="hidden" name="return_to" value="/admin/access-requests" />
+                      <Button type="submit" variant="secondary">
+                        Reenviar invitación
+                      </Button>
+                    </form>
+                    <form action={generateInvitationLink}>
+                      <input type="hidden" name="user_id" value={createdUser.id} />
+                      <input type="hidden" name="email" value={createdUser.email} />
+                      <input type="hidden" name="full_name" value={createdUser.full_name} />
+                      <input type="hidden" name="role" value={createdUser.role} />
+                      <input type="hidden" name="return_to" value="/admin/access-requests" />
+                      <Button type="submit" variant="ghost">
+                        Generar link
+                      </Button>
+                    </form>
+                  </div>
                 ) : null}
               </article>
             );
