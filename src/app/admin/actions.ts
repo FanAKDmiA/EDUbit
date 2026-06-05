@@ -290,13 +290,13 @@ export async function generateInvitationLink(formData: FormData) {
   redirect(`${returnTo}?invite_link=${encodeURIComponent(actionLink)}`);
 }
 
-export async function disableInvitedUser(formData: FormData) {
+export async function deleteUserAdmin(formData: FormData) {
   const { profile: actor } = await requireRole("admin");
   const userId = formValue(formData, "user_id");
   const returnTo = formValue(formData, "return_to") || "/admin/users";
 
   if (!userId) {
-    redirect(`${returnTo}?error=invalid-disable`);
+    redirect(`${returnTo}?error=invalid-delete`);
   }
 
   const supabase = createAdminClient();
@@ -310,43 +310,40 @@ export async function disableInvitedUser(formData: FormData) {
     redirect(`${returnTo}?error=user-not-found`);
   }
 
-  if (target.status !== "invited") {
-    redirect(`${returnTo}?error=user-not-invited`);
+  if (actor.id === userId) {
+    redirect(`${returnTo}?error=cannot-delete-self`);
   }
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({ status: "disabled", updated_by: actor.id })
-    .eq("id", userId);
+  const { data: relatedRequests } = await supabase
+    .from("access_requests")
+    .select("id")
+    .or(`created_user_id.eq.${userId},email.eq.${target.email}`);
+
+  const relatedRequestIds = (relatedRequests ?? []).map((request) => request.id);
+
+  if (relatedRequestIds.length > 0) {
+    await supabase.from("audit_logs").delete().in("entity_id", relatedRequestIds);
+  }
+
+  await supabase.from("audit_logs").delete().eq("target_user_id", userId);
+  await supabase.from("audit_logs").delete().eq("actor_user_id", userId);
+  await supabase.from("access_requests").update({ reviewed_by: null }).eq("reviewed_by", userId);
+  await supabase.from("access_requests").delete().eq("created_user_id", userId);
+  await supabase.from("access_requests").delete().eq("email", target.email);
+  await supabase.from("course_memberships").delete().eq("student_id", userId);
+  await supabase.from("courses").update({ teacher_id: null }).eq("teacher_id", userId);
+  await supabase.from("profiles").update({ created_by: null }).eq("created_by", userId);
+  await supabase.from("profiles").update({ updated_by: null }).eq("updated_by", userId);
+
+  const { error } = await supabase.auth.admin.deleteUser(userId);
 
   if (error) {
     redirect(`${returnTo}?error=${encodeURIComponent(error.message)}`);
   }
 
-  await supabase
-    .from("access_requests")
-    .update({
-      status: "cancelled",
-      reviewed_by: actor.id,
-      reviewed_at: new Date().toISOString(),
-      review_notes: "Invitación dada de baja"
-    })
-    .eq("created_user_id", userId)
-    .eq("status", "approved");
-
-  await logAuditEvent({
-    actorUserId: actor.id,
-    targetUserId: userId,
-    action: "invited_user_disabled",
-    entityType: "profile",
-    entityId: userId,
-    metadata: { email: target.email, role: target.role }
-  });
-
   revalidatePath("/admin/users");
-  revalidatePath(`/admin/users/${userId}`);
   revalidatePath("/admin/access-requests");
-  redirect(`${returnTo}?disabled=1`);
+  redirect(`${returnTo}?deleted=1`);
 }
 
 export async function approveAccessRequest(formData: FormData) {

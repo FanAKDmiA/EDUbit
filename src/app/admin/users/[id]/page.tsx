@@ -1,5 +1,5 @@
 import {
-  disableInvitedUser,
+  deleteUserAdmin,
   forcePasswordReset,
   generateInvitationLink,
   resendInvitation,
@@ -7,6 +7,7 @@ import {
 } from "@/app/admin/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { StatusMessage } from "@/components/ui/status-message";
 import { requireRole } from "@/lib/auth/require-role";
@@ -24,7 +25,7 @@ export default async function AdminUserDetailPage({
     updated?: string;
     reset?: string;
     resent?: string;
-    disabled?: string;
+    deleted?: string;
     invite_link?: string;
   }>;
 }) {
@@ -48,8 +49,8 @@ export default async function AdminUserDetailPage({
       ? "Reset de contraseña solicitado."
       : query.resent
         ? "Email de acceso reenviado correctamente."
-        : query.disabled
-          ? "Invitado dado de baja correctamente."
+        : query.deleted
+          ? "Invitado eliminado correctamente."
           : undefined;
 
   return (
@@ -122,15 +123,17 @@ export default async function AdminUserDetailPage({
               Generar link de acceso
             </Button>
           </form>
-          {user.status === "invited" ? (
-            <form action={disableInvitedUser}>
+          <form action={deleteUserAdmin}>
               <input type="hidden" name="user_id" value={user.id} />
-              <input type="hidden" name="return_to" value={`/admin/users/${user.id}`} />
-              <Button type="submit" variant="ghost">
-                Dar de baja invitado
-              </Button>
+              <input type="hidden" name="return_to" value="/admin/users" />
+              <ConfirmSubmitButton
+                type="submit"
+                variant="ghost"
+                message={`Vas a eliminar fisicamente a ${user.email}, su usuario, su solicitud y sus registros asociados. Esta accion no se puede deshacer. ¿Continuar?`}
+              >
+                Eliminar usuario
+              </ConfirmSubmitButton>
             </form>
-          ) : null}
         </div>
       </section>
     </AppShell>

@@ -1,12 +1,13 @@
 import {
   approveAccessRequest,
-  disableInvitedUser,
+  deleteUserAdmin,
   generateInvitationLink,
   rejectAccessRequest,
   resendInvitation
 } from "@/app/admin/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Textarea } from "@/components/ui/field";
 import { StatusMessage } from "@/components/ui/status-message";
@@ -22,7 +23,7 @@ export default async function AdminAccessRequestsPage({
     approved?: string;
     rejected?: string;
     resent?: string;
-    disabled?: string;
+    deleted?: string;
     invite_link?: string;
   }>;
 }) {
@@ -52,8 +53,8 @@ export default async function AdminAccessRequestsPage({
                 ? "Solicitud rechazada correctamente."
                 : params.resent
                   ? "Email de acceso reenviado correctamente."
-                    : params.disabled
-                      ? "Invitado dado de baja correctamente."
+                    : params.deleted
+                      ? "Invitado eliminado correctamente."
                       : undefined
           }
         />
@@ -141,15 +142,17 @@ export default async function AdminAccessRequestsPage({
                         Generar link de acceso
                       </Button>
                     </form>
-                    {createdUser.status === "invited" ? (
-                      <form action={disableInvitedUser}>
+                    <form action={deleteUserAdmin}>
                         <input type="hidden" name="user_id" value={createdUser.id} />
                         <input type="hidden" name="return_to" value="/admin/access-requests" />
-                        <Button type="submit" variant="ghost">
-                          Dar de baja invitado
-                        </Button>
+                        <ConfirmSubmitButton
+                          type="submit"
+                          variant="ghost"
+                          message={`Vas a eliminar fisicamente a ${createdUser.email}, su usuario, su solicitud y sus registros asociados. Esta accion no se puede deshacer. ¿Continuar?`}
+                        >
+                          Eliminar usuario
+                        </ConfirmSubmitButton>
                       </form>
-                    ) : null}
                   </div>
                 ) : null}
               </article>

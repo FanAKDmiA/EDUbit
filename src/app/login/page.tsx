@@ -16,18 +16,18 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="min-h-screen bg-[#f6f8f5] text-ink">
-      <section className="mx-auto grid min-h-screen max-w-6xl items-center gap-8 px-5 py-8 lg:grid-cols-[1.05fr_0.95fr]">
+      <section className="mx-auto grid min-h-screen max-w-6xl items-center gap-6 px-5 py-8 lg:grid-cols-2 lg:items-stretch lg:py-12">
         <div className="flex min-h-[520px] flex-col justify-center rounded-md border border-ink/10 bg-white px-6 py-7 shadow-sm md:px-10 md:py-9">
-          <div className="py-8">
+          <div>
             <Image
               src="/logo-edubit.png"
               alt="Logo de EDUbit"
               width={260}
               height={260}
-              className="mx-auto h-48 w-48 object-contain md:h-64 md:w-64"
+              className="mx-auto h-44 w-44 object-contain md:h-56 md:w-56"
               priority
             />
-            <div className="mx-auto mt-8 max-w-xl text-center">
+            <div className="mx-auto mt-7 max-w-md text-center">
               <p className="text-sm font-bold uppercase tracking-[0.18em] text-mint">Identidad digital educativa</p>
               <h1 className="mt-3 text-4xl font-black tracking-normal md:text-5xl">EDUbit</h1>
               <p className="mt-4 text-base leading-7 text-ink/65">
@@ -37,7 +37,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </div>
         </div>
 
-        <section className="rounded-md border border-ink/10 bg-white p-6 shadow-sm md:p-8">
+        <section className="flex min-h-[520px] flex-col justify-center rounded-md border border-ink/10 bg-white p-6 shadow-sm md:p-10">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-coral">Ingresar al campus</p>
             <h2 className="mt-3 text-3xl font-black">Iniciar sesión</h2>
