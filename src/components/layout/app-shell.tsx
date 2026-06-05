@@ -1,3 +1,4 @@
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Profile } from "@/types/database";
 import { roleLabel } from "@/types/roles";
 import Link from "next/link";
@@ -22,7 +23,19 @@ const navByRole = {
   ]
 };
 
-export function AppShell({ profile, children }: { profile: Profile; children: ReactNode }) {
+export async function AppShell({ profile, children }: { profile: Profile; children: ReactNode }) {
+  let hasPendingAccessRequests = false;
+
+  if (profile.role === "admin") {
+    const supabase = createAdminClient();
+    const { count } = await supabase
+      .from("access_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
+
+    hasPendingAccessRequests = Boolean(count && count > 0);
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f4ee]">
       <header className="border-b border-ink/10 bg-white">
@@ -35,9 +48,17 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-md px-3 py-2 text-sm font-semibold text-ink/75 hover:bg-ink/5 hover:text-ink"
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-ink/75 hover:bg-ink/5 hover:text-ink"
               >
                 {item.label}
+                {item.href === "/admin/access-requests" && hasPendingAccessRequests ? (
+                  <span
+                    aria-label="Hay solicitudes pendientes"
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs font-black leading-none text-white"
+                  >
+                    !
+                  </span>
+                ) : null}
               </Link>
             ))}
             <Link
