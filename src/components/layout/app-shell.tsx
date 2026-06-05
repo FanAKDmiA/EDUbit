@@ -3,6 +3,7 @@ import type { Profile } from "@/types/database";
 import { roleLabel } from "@/types/roles";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AppNav } from "./app-nav";
 import { Button } from "../ui/button";
 
 const navByRole = {
@@ -11,15 +12,18 @@ const navByRole = {
     { href: "/admin/users", label: "Usuarios" },
     { href: "/admin/courses", label: "Cursos" },
     { href: "/admin/access-requests", label: "Solicitudes" },
-    { href: "/admin/audit-logs", label: "Auditoría" }
+    { href: "/admin/audit-logs", label: "Auditoría" },
+    { href: "/account/profile", label: "Mi perfil" }
   ],
   teacher: [
     { href: "/teacher", label: "Inicio" },
-    { href: "/teacher/courses", label: "Cursos" }
+    { href: "/teacher/courses", label: "Cursos" },
+    { href: "/account/profile", label: "Mi perfil" }
   ],
   student: [
     { href: "/student", label: "Inicio" },
-    { href: "/student/courses", label: "Cursos" }
+    { href: "/student/courses", label: "Cursos" },
+    { href: "/account/profile", label: "Mi perfil" }
   ]
 };
 
@@ -43,37 +47,7 @@ export async function AppShell({ profile, children }: { profile: Profile; childr
           <Link href="/" className="text-xl font-black tracking-normal text-ink">
             EDUbit
           </Link>
-          <nav className="flex flex-wrap items-center gap-2">
-            {navByRole[profile.role].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-ink/75 hover:bg-ink/5 hover:text-ink"
-              >
-                {item.label}
-                {item.href === "/admin/access-requests" && hasPendingAccessRequests ? (
-                  <span
-                    aria-label="Hay solicitudes pendientes"
-                    className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs font-black leading-none text-white"
-                  >
-                    !
-                  </span>
-                ) : null}
-              </Link>
-            ))}
-            <Link
-              href="/account/profile"
-              className="rounded-md px-3 py-2 text-sm font-semibold text-ink/75 hover:bg-ink/5 hover:text-ink"
-            >
-              Mi perfil
-            </Link>
-            <Link
-              href="/account/security"
-              className="rounded-md px-3 py-2 text-sm font-semibold text-ink/75 hover:bg-ink/5 hover:text-ink"
-            >
-              Seguridad
-            </Link>
-          </nav>
+          <AppNav items={navByRole[profile.role]} hasPendingAccessRequests={hasPendingAccessRequests} />
           <div className="flex items-center gap-3">
             <div className="text-right text-sm">
               <p className="font-semibold">{profile.full_name}</p>
