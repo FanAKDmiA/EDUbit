@@ -50,7 +50,7 @@ export default async function AdminUserDetailPage({
       : query.resent
         ? "Email de acceso reenviado correctamente."
         : query.deleted
-          ? "Invitado eliminado correctamente."
+          ? "Usuario eliminado correctamente."
           : undefined;
 
   return (
@@ -95,6 +95,7 @@ export default async function AdminUserDetailPage({
           </div>
           <Button type="submit">Guardar cambios</Button>
         </form>
+
         <div className="mt-4 flex flex-wrap gap-3">
           <form action={forcePasswordReset}>
             <input type="hidden" name="user_id" value={user.id} />
@@ -123,17 +124,29 @@ export default async function AdminUserDetailPage({
               Generar link de acceso
             </Button>
           </form>
-          <form action={deleteUserAdmin}>
+        </div>
+
+        <div className="mt-8 rounded-md border border-red-300 bg-red-50 p-4">
+          <h2 className="text-lg font-black text-red-900">Zona crítica</h2>
+          <p className="mt-1 text-sm leading-6 text-red-900/75">
+            Eliminar usuario borra físicamente la cuenta, su perfil, solicitudes asociadas y referencias internas. Esta acción no se puede deshacer.
+          </p>
+          {profile.id === user.id ? (
+            <p className="mt-4 text-sm font-semibold text-red-900">No podés eliminar tu propio usuario mientras estás logueado.</p>
+          ) : (
+            <form action={deleteUserAdmin} className="mt-4">
               <input type="hidden" name="user_id" value={user.id} />
               <input type="hidden" name="return_to" value="/admin/users" />
               <ConfirmSubmitButton
                 type="submit"
                 variant="ghost"
-                message={`Vas a eliminar fisicamente a ${user.email}, su usuario, su solicitud y sus registros asociados. Esta accion no se puede deshacer. ¿Continuar?`}
+                className="border-red-700 bg-red-700 text-white hover:bg-red-800"
+                message={`Vas a eliminar físicamente a ${user.email}, su usuario, su solicitud y sus registros asociados. Esta acción no se puede deshacer. ¿Continuar?`}
               >
-                Eliminar usuario
+                Eliminar usuario definitivamente
               </ConfirmSubmitButton>
             </form>
+          )}
         </div>
       </section>
     </AppShell>
