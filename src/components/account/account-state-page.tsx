@@ -1,4 +1,3 @@
-import { signOut } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
@@ -10,7 +9,7 @@ export function AccountStatePage({ eyebrow, title, body }: { eyebrow: string; ti
         <p className="mt-5 text-sm font-bold uppercase tracking-[0.18em] text-coral">{eyebrow}</p>
         <h1 className="mt-3 text-3xl font-black">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-ink/65">{body}</p>
-        <form action={signOut} className="mt-6">
+        <form action="/logout" method="post" className="mt-6">
           <Button type="submit" variant="ghost">
             Cerrar sesión
           </Button>

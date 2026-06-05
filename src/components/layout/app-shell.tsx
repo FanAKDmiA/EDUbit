@@ -1,4 +1,3 @@
-import { signOut } from "@/app/actions";
 import type { Profile } from "@/types/database";
 import { roleLabel } from "@/types/roles";
 import Link from "next/link";
@@ -59,7 +58,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
               <p className="font-semibold">{profile.full_name}</p>
               <p className="text-ink/60">{roleLabel[profile.role]}</p>
             </div>
-            <form action={signOut}>
+            <form action="/logout" method="post">
               <Button variant="ghost" type="submit">
                 Salir
               </Button>
