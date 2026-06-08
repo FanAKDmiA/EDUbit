@@ -2,6 +2,7 @@
 
 import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getSiteUrl } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { roleHome } from "@/types/roles";
 import { redirect } from "next/navigation";
@@ -70,4 +71,20 @@ export async function signIn(formData: FormData) {
   await admin.from("profiles").update({ last_login_at: new Date().toISOString() }).eq("id", user.id);
 
   redirect(roleHome[profile.role as keyof typeof roleHome]);
+}
+
+export async function signInWithGoogle() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${getSiteUrl()}/auth/callback`
+    }
+  });
+
+  if (error || !data.url) {
+    redirect("/login?error=oauth");
+  }
+
+  redirect(data.url);
 }

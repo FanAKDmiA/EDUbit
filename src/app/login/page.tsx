@@ -3,11 +3,12 @@ import { Field, Input } from "@/components/ui/field";
 import { StatusMessage } from "@/components/ui/status-message";
 import Image from "next/image";
 import Link from "next/link";
-import { signIn } from "./actions";
+import { signIn, signInWithGoogle } from "./actions";
 
 const messages: Record<string, string> = {
   "missing-fields": "Ingresá email y contraseña.",
-  "invalid-credentials": "Las credenciales no son válidas."
+  "invalid-credentials": "Las credenciales no son válidas.",
+  oauth: "No pudimos iniciar sesión con el proveedor elegido."
 };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
@@ -42,11 +43,33 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-coral">Ingresar al campus</p>
             <h2 className="mt-3 text-3xl font-black">Iniciar sesión</h2>
             <p className="mt-2 text-sm leading-6 text-ink/65">
-              Usá las credenciales creadas por administración para acceder a tu panel.
+              Usá tus credenciales o una cuenta social habilitada para acceder.
             </p>
           </div>
 
-          <form action={signIn} className="mt-7 grid gap-4">
+          <div className="mt-7 grid gap-3">
+            <form action={signInWithGoogle}>
+              <Button type="submit" variant="ghost" className="w-full gap-2">
+                Continuar con Google
+              </Button>
+            </form>
+            <button
+              type="button"
+              disabled
+              className="inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-md border border-ink/10 bg-ink/5 px-4 text-sm font-semibold text-ink/45"
+              title="Supabase Auth no ofrece Instagram como proveedor OAuth directo. Se puede evaluar Meta/Facebook o un proveedor OIDC custom."
+            >
+              Instagram no disponible directo
+            </button>
+          </div>
+
+          <div className="my-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink/40">
+            <span className="h-px flex-1 bg-ink/10" />
+            <span>Email</span>
+            <span className="h-px flex-1 bg-ink/10" />
+          </div>
+
+          <form action={signIn} className="grid gap-4">
             <StatusMessage error={error} />
             <Field label="Email">
               <Input name="email" type="email" autoComplete="email" required />
